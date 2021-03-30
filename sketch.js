@@ -14,10 +14,13 @@ let CELL_SIZE = 5;
 let grid = [];
 let states = [];
 let STATE_RANGE = 4; // Number of colours to use, from beginning.
-let MUTATION_RATE = 0.5; // Chance of a cell switching to a random state.
+let MUTATION_RATE = 0.3; // Chance of a cell switching to a random state.
 // 'Radius' of square sub-grid which each cell considers before switching state.
 // Don't make this too big, or it will take up too much compute.
-let OFFSET_BOUND = 2;
+let OFFSET_BOUND = 5;
+// Does a cell switch to the state of the majority or the minority
+// within the local sub-grid?
+let MAJORITY_RULES = true;
 
 function setup() {
     createCanvas(DIS_WIDTH, DIS_HEIGHT);
@@ -43,10 +46,10 @@ function draw() {
     background(20);
     noStroke();
     display_grid(grid, GRID_SIZE, CELL_SIZE, states);
-    grid = update_grid(grid, GRID_SIZE, STATE_RANGE, MUTATION_RATE, OFFSET_BOUND);
+    grid = update_grid(grid, GRID_SIZE, STATE_RANGE, MUTATION_RATE, OFFSET_BOUND, MAJORITY_RULES);
 }
 
-function update_grid(grid, grid_size, state_range, mutation_rate, offset_bound) {
+function update_grid(grid, grid_size, state_range, mutation_rate, offset_bound, majority_rules) {
     let updated_grid = deepCopy(grid);
     for (let row = 0; row < grid_size; row++) {
         for (let col = 0; col < grid_size; col++) {
@@ -71,7 +74,11 @@ function update_grid(grid, grid_size, state_range, mutation_rate, offset_bound) 
                 }
             }
             // Put updated cell in new grid.
-            updated_grid[row][col] = get_index_of_largest_value(state_count);
+            if (majority_rules) {
+                updated_grid[row][col] = get_index_of_largest_value(state_count);
+            } else {
+                updated_grid[row][col] = get_index_of_smallest_non_zero_value(state_count);
+            }
         }
     }
     return updated_grid;
@@ -99,6 +106,25 @@ function get_index_of_largest_value(arr) {
         }
     }
     return indices_of_largest[Math.floor(Math.random() * indices_of_largest.length)];
+}
+
+// Returns index with the smallest non-zero value in object.
+// If multiple indices have the same value, choose between them randomly.
+function get_index_of_smallest_non_zero_value(arr) {
+    // Replace each 0 with Infinity.
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i] == 0) {
+            arr[i] = Infinity;
+        }
+    }
+    // Find indices with the smallest non-zero value.
+    let indices_of_smalles_non_zero = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i] == min(arr)) {
+            indices_of_smalles_non_zero.push(i);
+        }
+    }
+    return indices_of_smalles_non_zero[Math.floor(Math.random() * indices_of_smalles_non_zero.length)];
 }
 
 const deepCopy = (arr) => {
